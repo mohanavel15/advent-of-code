@@ -1,3 +1,4 @@
 *.txt
 .zig-*
 zig-out
+day*.txt
