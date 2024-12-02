@@ -38,24 +38,18 @@ pub fn Solution() !void {
         const safe = montonic(levels.items) and checkRange(levels.items);
         try levels_safety.append(safe);
 
-        var skip_idx: usize = 0;
-        var safe2 = false;
-
-        while (skip_idx < levels.items.len) {
+        for (0..levels.items.len) |skip_idx| {
             var new_levels = try levels.clone();
             defer new_levels.deinit();
 
             _ = new_levels.orderedRemove(skip_idx);
 
-            safe2 = montonic(new_levels.items) and checkRange(new_levels.items);
+            const safe2 = montonic(new_levels.items) and checkRange(new_levels.items);
             if (safe2) {
+                try levels_safety2.append(safe2);
                 break;
             }
-
-            skip_idx += 1;
         }
-
-        try levels_safety2.append(safe2);
     }
 
     const sum_of_safe = std.mem.count(bool, levels_safety.items, &[_]bool{true});
