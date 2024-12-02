@@ -17,74 +17,81 @@ pub fn Solution() !void {
 
     const content = try std.fs.cwd().readFile("inputs/day02.txt", buffer);
 
-    var change_in_levels = std.ArrayList(bool).init(allocator);
-    defer change_in_levels.deinit();
+    var levels_safety = std.ArrayList(bool).init(allocator);
+    var levels_safety2 = std.ArrayList(bool).init(allocator);
+    defer levels_safety.deinit();
+    defer levels_safety2.deinit();
 
     var lines = std.mem.tokenizeAny(u8, content, "\n");
+
     while (lines.next()) |line| {
         var numbers = std.mem.tokenizeAny(u8, line, " ");
 
-        var levels = std.ArrayList(u32).init(allocator);
+        var levels = std.ArrayList(i32).init(allocator);
         defer levels.deinit();
 
         while (numbers.next()) |number| {
-            const n = try parseInt(u32, number, 10);
+            const n = try parseInt(i32, number, 10);
             try levels.append(n);
         }
 
-        var safe: bool = true;
-        var order: u32 = 0;
-        var sum_of_unsaf = 0;
-        for (1..levels.items.len) |idx| {
-            const left = levels.items[idx - 1];
-            const right = levels.items[idx];
+        const safe = montonic(levels.items) and checkRange(levels.items);
+        try levels_safety.append(safe);
 
-            if (left == right) {
-                safe = false;
+        var skip_idx: usize = 0;
+        var safe2 = false;
+
+        while (skip_idx < levels.items.len) {
+            var new_levels = try levels.clone();
+            defer new_levels.deinit();
+
+            _ = new_levels.orderedRemove(skip_idx);
+
+            safe2 = montonic(new_levels.items) and checkRange(new_levels.items);
+            if (safe2) {
                 break;
-            } else if (left > right) {
-                if (order == 2) {
-                    safe = false;
-                    break;
-                }
-                order = 1;
-
-                if ((left - right) > 3) {
-                    safe = false;
-                    break;
-                }
-            } else {
-                if (order == 1) {
-                    safe = false;
-                    break;
-                }
-                order = 2;
-
-                if ((right - left) > 3) {
-                    safe = false;
-                    break;
-                }
             }
+
+            skip_idx += 1;
         }
 
-        try change_in_levels.append(safe);
+        try levels_safety2.append(safe2);
     }
 
-    var sum_of_safe: u32 = 0;
-
-    for (change_in_levels.items) |change| {
-        if (change == true) {
-            sum_of_safe += 1;
-        }
-    }
-
+    const sum_of_safe = std.mem.count(bool, levels_safety.items, &[_]bool{true});
     std.log.info("Solution 1: Number of Safe : {}", .{sum_of_safe});
 
-    // var sum_similarity_score: usize = 0;
-    // for (left_list.items) |value| {
-    //     const count = std.mem.count(u32, right_list.items, &[_]u32{value});
-    //     sum_similarity_score += @as(usize, value) * count;
-    // }
+    const sum_of_safe2 = std.mem.count(bool, levels_safety2.items, &[_]bool{true});
+    std.log.info("Solution 2: Number of Safe : {}", .{sum_of_safe2});
+}
 
-    // std.log.info("Solution 2: Sum of Similarity Score: {}", .{sum_similarity_score});
+fn montonic(values: []i32) bool {
+    var isAsc: bool = true;
+    for (1..values.len) |idx| {
+        if (values[idx - 1] > values[idx]) {
+            isAsc = false;
+            break;
+        }
+    }
+
+    var isDsc: bool = true;
+    for (1..values.len) |idx| {
+        if (values[idx - 1] < values[idx]) {
+            isDsc = false;
+            break;
+        }
+    }
+
+    return isAsc or isDsc;
+}
+
+fn checkRange(values: []i32) bool {
+    for (1..values.len) |idx| {
+        const diff = values[idx - 1] - values[idx];
+        if (diff < -3 or diff > 3 or diff == 0) {
+            return false;
+        }
+    }
+
+    return true;
 }
