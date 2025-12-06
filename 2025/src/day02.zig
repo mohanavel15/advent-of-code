@@ -21,7 +21,6 @@ pub fn Solution() !void {
             }
 
             if (checkInvalidId2(id)) {
-                // std.debug.print("{d}\n", .{id});
                 invalidIds2 += id;
             }
         }
