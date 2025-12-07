@@ -2,7 +2,7 @@ const std = @import("std");
 
 const DATA = @embedFile("inputs/day04.txt");
 const WIDTH = std.mem.indexOf(u8, DATA, &.{'\n'}).?;
-const HEIGHT = DATA.len / WIDTH;
+const HEIGHT = DATA.len / (WIDTH + 1);
 
 fn mat_index(row: usize, col: usize) usize {
     return (WIDTH + 1) * row + col;
