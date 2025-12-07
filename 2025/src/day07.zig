@@ -1,43 +1,58 @@
 const std = @import("std");
-const parseInt = std.fmt.parseInt;
 
 const DATA = @embedFile("inputs/day07.txt");
+const WIDTH = std.mem.indexOf(u8, DATA, &.{'\n'}).?;
+const HEIGHT = DATA.len / (WIDTH + 1);
 
-fn mat_index(width: usize, row: usize, col: usize) usize {
-    return width * row + col;
+fn mat_index(row: usize, col: usize) usize {
+    return (WIDTH + 1) * row + col;
 }
 
 pub fn Solution() !void {
-    const width = comptime std.mem.indexOf(u8, DATA, &.{'\n'}).? + 1;
-    const height = comptime DATA.len / width + 1;
+    var copy: [DATA.len]u8 = undefined;
+    @memcpy(&copy, DATA);
 
-    const start = std.mem.indexOf(u8, DATA, &.{'S'}).?;
-
-    var prev_beam_loc: [width]u1 = undefined;
-    @memset(&prev_beam_loc, 0);
-    prev_beam_loc[start] = 1;
+    var split_cal: [DATA.len]usize = undefined;
+    @memset(&split_cal, 0);
 
     var total_split: usize = 0;
 
-    for (1..height) |r| {
-        var new_beam_loc: [width]u1 = undefined;
-        @memset(&new_beam_loc, 0);
+    for (1..HEIGHT) |r| {
+        for (0..WIDTH) |c| {
+            const prev_idx = mat_index(r - 1, c);
+            const idx = mat_index(r, c);
 
-        for (0..width - 1) |c| {
-            if (prev_beam_loc[c] == 1) {
-                if (DATA[mat_index(width, r, c)] == '.') {
-                    new_beam_loc[c] = 1;
+            if (copy[prev_idx] == '|' or copy[prev_idx] == 'S') {
+                if (DATA[idx] == '.') {
+                    copy[idx] = '|';
+                    if (split_cal[prev_idx] == 0) split_cal[prev_idx] = 1;
+                    split_cal[idx] += split_cal[prev_idx];
                     continue;
                 }
 
                 total_split += 1;
-                new_beam_loc[c - 1] = 1;
-                new_beam_loc[c + 1] = 1;
+
+                const left_idx = mat_index(r, c - 1);
+                const right_idx = mat_index(r, c + 1);
+
+                split_cal[left_idx] += split_cal[prev_idx];
+                split_cal[right_idx] += split_cal[prev_idx];
+
+                copy[left_idx] = '|';
+                copy[right_idx] = '|';
             }
         }
 
-        @memcpy(&prev_beam_loc, &new_beam_loc);
+        // std.debug.print("\x1b[2J\x1b[H{s}", .{copy});
+        // std.Thread.sleep(std.time.ns_per_s / 24);
     }
 
     std.debug.print("Day 7 - Solution 1: {d}\n", .{total_split});
+
+    var total_timeline: usize = 0;
+    for (0..WIDTH) |idx| {
+        total_timeline += split_cal[mat_index(HEIGHT - 1, idx)];
+    }
+
+    std.debug.print("Day 7 - Solution 2: {d}\n", .{total_timeline});
 }
