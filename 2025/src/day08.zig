@@ -6,6 +6,10 @@ const parseInt = std.fmt.parseInt;
 
 const DATA = @embedFile("inputs/day08.txt");
 
+fn mat_index(WIDTH: usize, row: usize, col: usize) usize {
+    return (WIDTH + 1) * row + col;
+}
+
 pub fn Solution() !void {
     const ROWS = std.mem.count(u8, DATA, &.{'\n'});
 
@@ -22,22 +26,10 @@ pub fn Solution() !void {
 
     @memset(junction_boxes, 0);
 
-    var dist_mat = try allocator.alloc([]f64, ROWS);
-    for (0..ROWS) |i| {
-        dist_mat[i] = try allocator.alloc(f64, ROWS - i + 1);
-    }
+    var dist_mat = try allocator.alloc(f64, ROWS * ROWS);
+    defer allocator.free(dist_mat);
 
-    defer {
-        for (0..ROWS) |i| {
-            allocator.free(dist_mat[i]);
-        }
-
-        allocator.free(dist_mat);
-    }
-
-    for (0..ROWS) |i| {
-        @memset(dist_mat[i], -1);
-    }
+    @memset(dist_mat, std.math.floatMax(f64));
 
     for (0..ROWS) |i| {
         const coords_str = coords_strs.next().?;
@@ -52,45 +44,24 @@ pub fn Solution() !void {
 
     for (0..ROWS) |i| {
         for (i + 1..ROWS) |j| {
-            dist_mat[i][ROWS - (j + 1)] = EuclideanDist(&coords[i], &coords[j]);
+            dist_mat[mat_index(ROWS, i, j)] = EuclideanDist(&coords[i], &coords[j]);
         }
     }
 
     for (0..1000) |_| {
-        var min_dist: f64 = std.math.floatMax(f64);
-        var min_pos1: usize = 0;
-        var min_pos2: usize = 0;
+        const min_idx = std.mem.indexOfMin(f64, dist_mat);
+        const min_pos2: usize = min_idx % (ROWS + 1);
+        const min_pos1: usize = ((min_idx - min_pos2) / (ROWS + 1));
 
-        for (0..ROWS) |i| {
-            for (i + 1..ROWS) |j| {
-                const dist = dist_mat[i][ROWS - (j + 1)];
-                if (dist < min_dist) {
-                    min_dist = dist;
-                    min_pos1 = i;
-                    min_pos2 = j;
-                }
-            }
-        }
-
-        dist_mat[min_pos1][ROWS - (min_pos2 + 1)] = std.math.floatMax(f64);
+        dist_mat[min_idx] = std.math.floatMax(f64);
 
         if (circuits[min_pos1] == circuits[min_pos2]) continue;
 
-        const circuit2 = circuits[min_pos2];
-
-        // std.debug.print("========================================\n", .{});
-        for (0..ROWS) |idx| {
-            if (circuits[idx] == circuit2) {
-                // std.debug.print("{any} <---------------> {any} - {d}\n", .{ &coords[min_pos1], &coords[idx], circuits[min_pos1] });
-                circuits[idx] = circuits[min_pos1];
-            }
-        }
+        std.mem.replaceScalar(usize, circuits, circuits[min_pos2], circuits[min_pos1]);
     }
 
     for (0..ROWS) |idx| {
-        // std.debug.print("{d}\n", .{circuits[idx]});
-        const j_idx = circuits[idx];
-        junction_boxes[j_idx] += 1;
+        junction_boxes[circuits[idx]] += 1;
     }
 
     std.mem.sort(usize, junction_boxes, {}, std.sort.desc(usize));
