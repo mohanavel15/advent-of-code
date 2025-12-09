@@ -22,38 +22,21 @@ pub fn Solution() !void {
 
     @memset(junction_boxes, 0);
 
-    var connected = try allocator.alloc([]bool, ROWS);
+    var dist_mat = try allocator.alloc([]f64, ROWS);
     for (0..ROWS) |i| {
-        connected[i] = try allocator.alloc(bool, ROWS);
+        dist_mat[i] = try allocator.alloc(f64, ROWS - i + 1);
     }
 
     defer {
         for (0..ROWS) |i| {
-            allocator.free(connected[i]);
+            allocator.free(dist_mat[i]);
         }
 
-        allocator.free(connected);
+        allocator.free(dist_mat);
     }
 
     for (0..ROWS) |i| {
-        @memset(connected[i], false);
-    }
-
-    var memo = try allocator.alloc([]f64, ROWS);
-    for (0..ROWS) |i| {
-        memo[i] = try allocator.alloc(f64, ROWS);
-    }
-
-    defer {
-        for (0..ROWS) |i| {
-            allocator.free(memo[i]);
-        }
-
-        allocator.free(memo);
-    }
-
-    for (0..ROWS) |i| {
-        @memset(memo[i], -1);
+        @memset(dist_mat[i], -1);
     }
 
     for (0..ROWS) |i| {
@@ -67,6 +50,12 @@ pub fn Solution() !void {
         circuits[i] = i;
     }
 
+    for (0..ROWS) |i| {
+        for (i + 1..ROWS) |j| {
+            dist_mat[i][ROWS - (j + 1)] = EuclideanDist(&coords[i], &coords[j]);
+        }
+    }
+
     for (0..1000) |_| {
         var min_dist: f64 = std.math.floatMax(f64);
         var min_pos1: usize = 0;
@@ -74,13 +63,7 @@ pub fn Solution() !void {
 
         for (0..ROWS) |i| {
             for (i + 1..ROWS) |j| {
-                if (connected[i][j]) continue;
-
-                if (memo[i][j] == -1) {
-                    memo[i][j] = EuclideanDist(&coords[i], &coords[j]);
-                }
-
-                const dist = memo[i][j];
+                const dist = dist_mat[i][ROWS - (j + 1)];
                 if (dist < min_dist) {
                     min_dist = dist;
                     min_pos1 = i;
@@ -89,7 +72,7 @@ pub fn Solution() !void {
             }
         }
 
-        connected[min_pos1][min_pos2] = true;
+        dist_mat[min_pos1][ROWS - (min_pos2 + 1)] = std.math.floatMax(f64);
 
         if (circuits[min_pos1] == circuits[min_pos2]) continue;
 
